@@ -27,23 +27,34 @@ class Chat:
 
     Base characteristics:
      - Name of chat
+     - Chat creator
      - People limit in group (None for No-limit mode)
      - Security mode: On/Off
      - Password (for Security mode)
 
     Dynamic parameters:
-     - People in chat IRL
+     - List of users in chat and their rights
+     - AutoRight (rights of users, who join chat first time)
+     - Users in chat IRL
      - Favourite messages and their count
-     - Message Stream and its count'''
+     - Message Stream and its count
+     
+    Format of objects in list of users in Chat:
+     - user: User
+     - rights: str; one of ['Administrator', 'Editor', 'Reader']
+    '''
 
-    def __init__(self, name, limit=None, security_mode=False, password=None):
+    def __init__(self, name, creator, limit=None, security_mode=False, password=None, autoright='Editor'):
         """Creation of chat."""
         self.name = name
+        self._creator = creator
         self.limit = limit
         self.security_mode = security_mode
         self.password = password
 
-        self.people_in_chat = 0
+        self.users = []
+        self.autoright = autoright
+        self.people_in_chat_IRL = []
         self.favourites = []
         self.favourites_count = 0
         self.stream = []
@@ -60,6 +71,13 @@ class Chat:
             return LimitSetupError
 
         self.limit = limit
+
+    def set_autoright(self, autoright):
+        """Setup of autoright
+
+        Available only for the chat administrator
+
+        """
 
     def set_security_mode(self, password):
         """Setup of security mode
@@ -85,7 +103,7 @@ class Message:
     def __init__(self, text, sender, ID):
         """Creation of message."""
         self.text = text
-        self.sender = sender
+        self._sender = sender
         self.ID = ID
 
         self.favourite = False
@@ -93,3 +111,56 @@ class Message:
     def set_favourite(self):
         """Setup of \'favourites\' label."""
         self.favourite = True
+    
+
+class User:
+    '''Describe parameters of user
+
+    Base characteristics:
+     - User's ID (based on your MAC-address of computer)
+     - User's name
+    
+    Dynamic paremeters:
+     - List of chats and user's rights for each chat
+     - Current chat
+    
+    Format of objects in list of chats in User:
+     - user: Chat
+     - rights: str; one of ['Administrator', 'Editor', 'Reader']
+    
+    '''
+
+    def __init__(self, user_id, user_name):
+        """Creation of user."""
+        self._user_id = user_id
+        self.user_name = user_name
+
+        self.chats = []
+        self.current_chat = None
+
+    def show_chatlist(self):
+        """Show list of user's chats."""
+        return [(chat.name, rights) for chat, rights in self.chats]
+    
+    def open_chat(self, name):
+        """Open existing chat."""
+        pass
+
+    def create_chat(self, name, limit, security_mode, password, autoright):
+        """Create new chat."""
+        pass
+    
+    def quit_chat(self, name):
+        """Quit chat."""
+        pass
+    
+    def delete_chat(self, name):
+        """Delete chat
+        
+        Available only if you are a chat administrator
+        """
+        pass
+
+    def info_chat(self, name):
+        """Take information about chat."""
+        pass
