@@ -112,6 +112,7 @@ class Chat:
         return hash(password_to_check) == self.password
 
     def check_rights(self, user, right: Rights):
+        """Rights check."""
         chat_user = self.users.setdefault(user._user_id)
 
         if chat_user is None:
@@ -219,6 +220,20 @@ class User:
             'limit': limit if limit else "Unlimited",
             'security_mode': security_mode,
             'autoright': autoright
+        }
+    
+    def add_to_chat(self, user_id, name):
+        """Add user to chat
+
+        Available only if you are a chat administrator
+        """
+        chat: Chat = TM_chats[name]
+        user: User = TM_users[user_id]
+
+        chat.users[user._user_id] = {
+            'username': user.username,
+            'rights': chat.autoright,
+            'queue': user.queue
         }
 
     def quit_chat(self, name):
