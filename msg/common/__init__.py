@@ -1,4 +1,7 @@
 '''Description of all objects using in project.'''
+import asyncio
+
+from enum import Enum
 
 
 class TerminalError(Exception):
@@ -22,6 +25,20 @@ class NoAccessError(TerminalError):
         You don't have the necessary access rights to perform this action"""
 
 
+class UnvalidChatError(TerminalError):
+    '''Access exception.'''
+
+    def __str__(self):
+        return """Error during try to do smth with chat where you not in:
+        Please join a chat to perform this action"""
+
+
+class Rights(Enum):
+    ADMINISTRATOR = 0
+    EDITOR = 2
+    READER = 3
+
+
 class Chat:
     '''Describe parameters of text chat
 
@@ -38,10 +55,10 @@ class Chat:
      - Users in chat IRL
      - Favourite messages and their count
      - Message Stream and its count
-     
+
     Format of objects in list of users in Chat:
      - user: User
-     - rights: str; one of ['Administrator', 'Editor', 'Reader']
+     - rights: Rights
     '''
 
     def __init__(self, name, creator, limit=None, security_mode=False, password=None, autoright='Editor'):
@@ -50,11 +67,11 @@ class Chat:
         self._creator = creator
         self.limit = limit
         self.security_mode = security_mode
-        self.password = password
+        self.password = hash(password)
 
-        self.users = []
+        self.users = dict()  # user_id -> {name, rights}
         self.autoright = autoright
-        self.people_in_chat_IRL = []
+        self.people_in_chat_IRL = set()
         self.favourites = []
         self.favourites_count = 0
         self.stream = []
@@ -78,6 +95,7 @@ class Chat:
         Available only for the chat administrator
 
         """
+        self.autoright = autoright
 
     def set_security_mode(self, password):
         """Setup of security mode
@@ -87,6 +105,26 @@ class Chat:
         """
         self.security_mode = True
         self.password = password
+
+    def check_password(self, password_to_check):
+        """Authorization check."""
+
+        return hash(password_to_check) == self.password
+
+    def check_rights(self, user, right: Rights):
+        chat_user = self.users.setdefault(user._user_id)
+
+        if chat_user is None:
+            return UnvalidChatError
+
+        if right > chat_user['rights']:
+            return NoAccessError
+
+        return True
+
+
+# set of all chats in TM
+TM_chats = dict()
 
 
 class Message:
@@ -111,7 +149,7 @@ class Message:
     def set_favourite(self):
         """Setup of \'favourites\' label."""
         self.favourite = True
-    
+
 
 class User:
     '''Describe parameters of user
@@ -119,48 +157,92 @@ class User:
     Base characteristics:
      - User's ID (based on your MAC-address of computer)
      - User's name
-    
+
     Dynamic paremeters:
      - List of chats and user's rights for each chat
      - Current chat
-    
+
     Format of objects in list of chats in User:
      - user: Chat
-     - rights: str; one of ['Administrator', 'Editor', 'Reader']
-    
+     - rights: Rights
     '''
 
-    def __init__(self, user_id, user_name):
+    def __init__(self, user_id, username):
         """Creation of user."""
         self._user_id = user_id
-        self.user_name = user_name
+        self.username = username
+        self.queue = asyncio.Queue()
 
-        self.chats = []
+        self.chats = dict()  # name -> {Chat, rights}
         self.current_chat = None
 
     def show_chatlist(self):
         """Show list of user's chats."""
-        return [(chat.name, rights) for chat, rights in self.chats]
-    
+        return [(key, value.right) for key, value in self.chats.items]
+
     def open_chat(self, name):
         """Open existing chat."""
-        pass
+        chat: Chat = TM_chats[name]
 
-    def create_chat(self, name, limit, security_mode, password, autoright):
+        if self._user_id not in chat.users.keys():
+            chat.users[self._user_id] = {
+                'username': self.username,
+                'rights': chat.autoright,
+                'queue': self.queue
+            }
+        chat.people_in_chat_IRL.add(self._user_id)
+
+    def create_chat(self, name, limit=None, security_mode=False, password=None, autoright=Rights.EDITOR):
         """Create new chat."""
-        pass
-    
+        new_chat = Chat(
+            name=name,
+            creator=self._user_id,
+            limit=limit,
+            security_mode=security_mode,
+            password=password,
+            autoright=autoright
+        )
+
+        new_chat.users[self._user_id] = {
+            'username': self.username,
+            'rights': Rights.ADMINISTRATOR,
+            'queue': self.queue
+        }
+        self.chats[name] = {
+            'chat': new_chat,
+            'rights': Rights.ADMINISTRATOR
+        }
+        TM_chats[name] = new_chat
+
+        return {
+            'name': name,
+            'limit': limit if limit else "Unlimited",
+            'security_mode': security_mode,
+            'autoright': autoright
+        }
+
     def quit_chat(self, name):
         """Quit chat."""
-        pass
-    
+        chat: Chat = TM_chats[name]
+
+        chat.people_in_chat_IRL.discard(self._user_id)
+        chat.users.pop(self._user_id)
+
     def delete_chat(self, name):
         """Delete chat
-        
+
         Available only if you are a chat administrator
         """
-        pass
+        chat: Chat = TM_chats[name]
+
+        for user in chat.users:
+            user.quit_chat(chat.name)
+        TM_chats.pop(chat.name)
 
     def info_chat(self, name):
         """Take information about chat."""
         pass
+
+
+# set of all users in TM
+TM_users = dict()
