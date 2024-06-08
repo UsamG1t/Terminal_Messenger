@@ -38,6 +38,29 @@ class Rights(Enum):
     EDITOR = 2
     READER = 3
 
+    def __init__(self, arg):
+        match arg:
+            case 0:
+                return Rights.ADMINISTRATOR
+            case 1:
+                return Rights.EDITOR
+            case 2:
+                return Rights.READER
+            case 'Administrator':
+                return Rights.ADMINISTRATOR
+            case 'Editor':
+                return Rights.EDITOR
+            case 'Reader':
+                return Rights.READER
+
+    def __str__(self):
+        if self == Rights.ADMINISTRATOR:
+            return 'Administrator'
+        if self == Rights.EDITOR:
+            return 'Editor'
+        if self == Rights.READER:
+            return 'Reader'
+
 
 class Chat:
     '''Describe parameters of text chat
@@ -179,7 +202,18 @@ class User:
 
     def show_chatlist(self):
         """Show list of user's chats."""
-        return [(key, value.right) for key, value in self.chats.items]
+        Avaliable = []
+        Hidden = []
+
+        for chat in TM_chats.values():
+            right = self.chats[chat.name]['rights'].__str__() if chat.name in self.chats.keys() else ""
+
+            if not chat.security_mode:
+                Avaliable.append({'name': chat.name, 'rights': right})
+            else:
+                Hidden.append({'name': chat.name, 'rights': right})
+
+        return (Avaliable, Hidden)
 
     def open_chat(self, name):
         """Open existing chat."""
@@ -193,7 +227,14 @@ class User:
             }
         chat.people_in_chat_IRL.add(self._user_id)
 
-    def create_chat(self, name, limit=None, security_mode=False, password=None, autoright=Rights.EDITOR):
+    def create_chat(
+            self,
+            name: str,
+            limit: int | None = None,
+            security_mode: bool = False,
+            password=None,
+            autoright: Rights = Rights.EDITOR
+    ):
         """Create new chat."""
         new_chat = Chat(
             name=name,
@@ -221,7 +262,7 @@ class User:
             'security_mode': security_mode,
             'autoright': autoright
         }
-    
+
     def add_to_chat(self, user_id, name):
         """Add user to chat
 
