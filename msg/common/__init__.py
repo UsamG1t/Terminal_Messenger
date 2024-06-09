@@ -35,23 +35,8 @@ class UnvalidChatError(TerminalError):
 
 class Rights(Enum):
     ADMINISTRATOR = 0
-    EDITOR = 2
-    READER = 3
-
-    def __init__(self, arg):
-        match arg:
-            case 0:
-                return Rights.ADMINISTRATOR
-            case 1:
-                return Rights.EDITOR
-            case 2:
-                return Rights.READER
-            case 'Administrator':
-                return Rights.ADMINISTRATOR
-            case 'Editor':
-                return Rights.EDITOR
-            case 'Reader':
-                return Rights.READER
+    EDITOR = 1
+    READER = 2
 
     def __str__(self):
         if self == Rights.ADMINISTRATOR:
@@ -60,6 +45,22 @@ class Rights(Enum):
             return 'Editor'
         if self == Rights.READER:
             return 'Reader'
+
+
+def arg2Rights(arg):
+    match arg:
+        case '0':
+            return Rights.ADMINISTRATOR
+        case '1':
+            return Rights.EDITOR
+        case '2':
+            return Rights.READER
+        case 'Administrator':
+            return Rights.ADMINISTRATOR
+        case 'Editor':
+            return Rights.EDITOR
+        case 'Reader':
+            return Rights.READER
 
 
 class Chat:
@@ -92,7 +93,7 @@ class Chat:
         self.security_mode = security_mode
         self.password = hash(password)
 
-        self.users = dict()  # user_id -> {name, rights}
+        self.users: dict[str, dict[str, (str, Rights)]] = {}  # user_id -> {name, rights}
         self.autoright = autoright
         self.people_in_chat_IRL = set()
         self.favourites = []
@@ -134,7 +135,7 @@ class Chat:
 
         return hash(password_to_check) == self.password
 
-    def check_rights(self, user, right: Rights):
+    def check_Rights(self, user, right: Rights):
         """Rights check."""
         chat_user = self.users.setdefault(user._user_id)
 
@@ -148,7 +149,7 @@ class Chat:
 
 
 # set of all chats in TM
-TM_chats = dict()
+TM_chats: dict[str, Chat] = {}
 
 
 class Message:
@@ -197,7 +198,7 @@ class User:
         self.username = username
         self.queue = asyncio.Queue()
 
-        self.chats = dict()  # name -> {Chat, rights}
+        self.chats: dict[str, dict[str, (Chat, Rights)]] = {}  # name -> {Chat, rights}
         self.current_chat = None
 
     def show_chatlist(self):
@@ -223,9 +224,11 @@ class User:
             chat.users[self._user_id] = {
                 'username': self.username,
                 'rights': chat.autoright,
-                'queue': self.queue
+                'queue': self.queue,
+                '_': self._user_id
             }
         chat.people_in_chat_IRL.add(self._user_id)
+        self.current_chat = chat
 
     def create_chat(
             self,
@@ -297,8 +300,17 @@ class User:
 
     def info_chat(self, name):
         """Take information about chat."""
-        pass
+        chat: Chat = TM_chats[name]
+
+        response: dict[str, any] = {
+            'Name': chat.name,
+            'Creator': chat._creator,
+            'Participants': [(user['username'], user['rights']) for user in chat.users.values()],
+            'Online': [user['username'] for user in chat.users.values() if user['_'] in chat.people_in_chat_IRL]
+        }
+
+        return response
 
 
 # set of all users in TM
-TM_users = dict()
+TM_users: dict[str, User] = {}
