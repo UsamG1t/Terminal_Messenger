@@ -73,8 +73,9 @@ async def handler(reader, writer):
 
                 match cmd:
                     case 'entrance':
-                        args = shlex.join(args)
-                        my_user.username = args
+                        name = shlex.join(args)[0]
+                        my_user.username = name
+                        TLB_names[name] = my_user._user_id
                         answer = f"Welcome to Terminal Messenger, {my_user.username}\n"
 
                     case 'show_chatlist':
@@ -142,6 +143,10 @@ async def handler(reader, writer):
                             )
 
                     case 'add_to_chat':
+                        username, name = args
+                        user: User = TM_users[TLB_names[username]]
+                        
+
                         pass
                     case 'quit_chat':
                         my_user.quit_chat(args[0])
