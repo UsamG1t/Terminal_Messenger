@@ -1,7 +1,7 @@
 '''Description of all objects using in project.'''
 import asyncio
 
-from enum import Enum
+from enum import IntEnum
 
 
 class TerminalError(Exception):
@@ -33,7 +33,7 @@ class UnvalidChatError(TerminalError):
         Please join a chat to perform this action"""
 
 
-class Rights(Enum):
+class Rights(IntEnum):
     ADMINISTRATOR = 0
     EDITOR = 1
     READER = 2
@@ -45,7 +45,6 @@ class Rights(Enum):
             return 'Editor'
         if self == Rights.READER:
             return 'Reader'
-
 
 def arg2Rights(arg):
     match arg:
@@ -108,8 +107,8 @@ class Chat:
 
         If count of people online IRL more than new limit,
         return LimitSetupError"""
-        if limit < self.people_in_chat:
-            return LimitSetupError
+        if limit and limit < len(self.people_in_chat_IRL):
+            raise LimitSetupError
 
         self.limit = limit
 
@@ -121,15 +120,15 @@ class Chat:
         """
         self.autoright = autoright
 
-    def set_security_mode(self, password):
+    def set_security_mode(self, mode, password = None):
         """Setup of security mode
 
         Available only for the chat administrator
 
         """
-        self.security_mode = True
-        self.password = password
-
+        self.security_mode = mode
+        self.password = hash(password)
+    
     def check_password(self, password_to_check):
         """Authorization check."""
 
@@ -140,10 +139,10 @@ class Chat:
         chat_user = self.users.setdefault(user._user_id)
 
         if chat_user is None:
-            return UnvalidChatError
+            raise UnvalidChatError
 
         if right > chat_user['rights']:
-            return NoAccessError
+            raise NoAccessError
 
         return True
 
@@ -157,24 +156,42 @@ class Message:
 
     Base characteristics:
      - Text of message
+     - Mode of message
+     - Style of message
      - Message Sender
-     - ID of message in chat
+     - Message ID
 
     Dynamic parameters:
+     - Reply ID
      - Favourite'''
 
-    def __init__(self, text, sender, ID):
+    def __init__(self, *, text, mode = None, style = None, sender, msg_ID: int, reply_ID = None):
         """Creation of message."""
         self.text = text
+        self.mode = mode
+        self.style = style
         self._sender = sender
-        self.ID = ID
+        self._msg_ID = msg_ID
 
+
+        self.reply_ID = reply_ID
         self.favourite = False
 
     def set_favourite(self):
         """Setup of \'favourites\' label."""
         self.favourite = True
 
+    def __str__(self):
+        res = []
+        res.append(f'text: {self.text}')
+        res.append(f'mode: {self.mode}')
+        res.append(f'style: {self.style}')
+        res.append(f'sender: {self._sender}')
+        res.append(f'msg_id: {self._msg_ID}')
+        res.append(f'reply_id: {self.reply_ID}')
+        res.append(f'favourite: {self.favourite}')
+
+        return '\n'.join(res)
 
 class User:
     '''Describe parameters of user
@@ -201,6 +218,8 @@ class User:
         self.chats: dict[str, dict[str, (Chat, Rights)]] = {}  # name -> {Chat, rights}
         self.current_chat = None
 
+
+
     def show_chatlist(self):
         """Show list of user's chats."""
         Avaliable = []
@@ -219,16 +238,23 @@ class User:
     def open_chat(self, name):
         """Open existing chat."""
         chat: Chat = TM_chats[name]
+        first_time = False
 
         if self._user_id not in chat.users.keys():
+            first_time = True
             chat.users[self._user_id] = {
                 'username': self.username,
                 'rights': chat.autoright,
                 'queue': self.queue,
-                '_': self._user_id
+            }
+            self.chats[name] = {
+                'chat': chat,
+                'rights': chat.autoright
             }
         chat.people_in_chat_IRL.add(self._user_id)
         self.current_chat = chat
+
+        return first_time
 
     def create_chat(
             self,
@@ -259,12 +285,30 @@ class User:
         }
         TM_chats[name] = new_chat
 
-        return {
-            'name': name,
-            'limit': limit if limit else "Unlimited",
-            'security_mode': security_mode,
-            'autoright': autoright
-        }
+
+    def update_chat(self, name, limit: int = -1, autoright: Rights = None, security_mode = None, password = None):
+        chat: Chat = TM_chats[name]
+        response = []
+        try:
+            chat.check_Rights(user=self, right=Rights.ADMINISTRATOR)
+
+            if limit != -1:
+                chat.set_limit(limit=limit)
+                response.append(f'update limit: chat is {(str(limit)+"limited")*(limit is not None) + "Unlimited"*(limit is None)} now')
+
+            if autoright:
+                chat.set_autoright(autoright=autoright)
+                response.append(f'update autoright: everyone is {str(autoright)} now')
+            
+            if security_mode:
+                chat.set_security_mode(security_mode, password=password)
+                response.append(f'update security mode: security mode turn {"on" * security_mode + "off" * (not security_mode)}')
+
+        except TerminalError as e:
+            raise e       
+
+        return response
+
 
     def add_to_chat(self, user_id, name):
         """Add user to chat
@@ -274,11 +318,22 @@ class User:
         chat: Chat = TM_chats[name]
         user: User = TM_users[user_id]
 
-        chat.users[user._user_id] = {
-            'username': user.username,
-            'rights': chat.autoright,
-            'queue': user.queue
-        }
+        try:
+            chat.check_Rights(user=self, right=Rights.ADMINISTRATOR)
+
+            chat.users[user._user_id] = {
+                'username': user.username,
+                'rights': chat.autoright,
+                'queue': user.queue
+            }
+            user.chats[name] = {
+                'chat': chat,
+                'rights': chat.autoright
+            }
+        except TerminalError as e:
+            raise e       
+
+        return '{} was successfully added to {}'.format(user.username, name)
 
     def quit_chat(self, name):
         """Quit chat."""
@@ -286,6 +341,7 @@ class User:
 
         chat.people_in_chat_IRL.discard(self._user_id)
         chat.users.pop(self._user_id)
+        self.chats.pop(name)
 
     def delete_chat(self, name):
         """Delete chat
@@ -293,8 +349,11 @@ class User:
         Available only if you are a chat administrator
         """
         chat: Chat = TM_chats[name]
-
-        for user in chat.users:
+        
+        users = [TM_users[user] for user in chat.users.keys()]
+        for user in users:
+            if user.current_chat == chat:
+                user.exit_chat()
             user.quit_chat(chat.name)
         TM_chats.pop(chat.name)
 
@@ -304,13 +363,41 @@ class User:
 
         response: dict[str, any] = {
             'Name': chat.name,
-            'Creator': chat._creator,
+            'Creator': TM_users[chat._creator].username,
             'Participants': [(user['username'], user['rights']) for user in chat.users.values()],
-            'Online': [user['username'] for user in chat.users.values() if user['_'] in chat.people_in_chat_IRL]
+            'Online': [user['username'] for user in chat.users.values() if TLB_names[user['username']] in chat.people_in_chat_IRL]
         }
 
         return response
 
+    def send(self, *, msg: str, mode: str = None, style: str = None, reply_id: int = None) -> Message:
+        """Send message to chat."""
+        if self.current_chat is None:
+            raise UnvalidChatError()
+
+        message = Message(text=msg, mode=mode, style=style, sender=self, msg_ID=len(self.current_chat.stream), reply_ID=reply_id)
+        self.current_chat.stream.append(message)
+
+        return message
+
+    
+    def add_to_favourites(self, msg_id: int):
+        """Add message to Favourites."""
+        if self.current_chat is None:
+            raise UnvalidChatError()
+        
+        msg: Message = self.current_chat.stream[msg_id]
+        msg.set_favourite()
+
+        self.current_chat.favourites.append(msg)
+    
+    def exit_chat(self):
+        """Exit current chat."""
+        if self.current_chat is None:
+            raise UnvalidChatError()
+        
+        self.current_chat.people_in_chat_IRL.discard(self._user_id)
+        self.current_chat = None
 
 # set of all users in TM
 TM_users: dict[str, User] = {}
