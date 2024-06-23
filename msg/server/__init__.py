@@ -3,9 +3,13 @@ import shlex
 import asyncio
 
 from common import *
+from art import text2art
+from cowsay import cowsay
+
 
 
 def parse_create_chat(args: list):
+    """Parse arguments for chat settings."""
     try:
         assert isinstance(args[0], str)
         print('0 done')
@@ -43,13 +47,38 @@ def parse_create_chat(args: list):
     print("LOG:", result)
     return result
 
+def send_preparing(response: Message, chat: Chat = None) -> str:
+    """handler for sending command."""
+    answer = []
+
+    print(f'LOG:')
+    print(response)
+
+    answer.append(f'<{response._msg_ID}>')
+    answer.append(f'({response._sender.username})')
+    if response.reply_ID is not None:
+        answer.append(f'Reply on <{response.reply_ID}>: \"{chat.stream[response.reply_ID].text}\"')
+    answer.append('\n')
+
+    match response.mode:
+        case None:
+            text = response.text
+        case 'art':
+            text = text2art(response.text, font=(response.style if response.style is not None else 'rand'))
+        case 'cowsay':
+            text = cowsay(response.text, cow=(response.style if response.style is not None else 'default'))
+    answer.append(text + '\n')
+
+    return '\n'.join(answer)
 
 async def handler(reader, writer):
     """Async logic of handler."""
     client = writer.get_extra_info("peername")
     print(f'New Client on {client}')
-    my_user = User(user_id=hash(client), username='_')
+    my_user = User(user_id=hash(client), username=hash(client))
     TM_users[my_user._user_id] = my_user
+    TLB_names[my_user._user_id] = my_user._user_id
+
 
     send = asyncio.create_task(reader.readline())
     receive = asyncio.create_task(my_user.queue.get())
@@ -66,15 +95,18 @@ async def handler(reader, writer):
                 if (not request.result()):
                     break
 
-                cmd, *args = shlex.split(request.result().decode())
+                args = shlex.split(request.result().decode())
+                cmd, args = (args[0], args[1:]) if len(args) > 0 else ("", args)
+                
                 print("LOG: ", client, request.result().decode())
                 print("LOG: ", args)
                 answer = ""
 
                 match cmd:
                     case 'entrance':
-                        name = shlex.join(args)[0]
+                        name = args[0]
                         my_user.username = name
+                        del TLB_names[my_user._user_id]
                         TLB_names[name] = my_user._user_id
                         answer = f"Welcome to Terminal Messenger, {my_user.username}\n"
 
@@ -109,6 +141,7 @@ async def handler(reader, writer):
                     case 'open_chat':
                         name, *password = args
                         chat: Chat = TM_chats[name]
+                        access = True
 
                         if chat.security_mode:
                             access = chat.check_password(
@@ -118,8 +151,13 @@ async def handler(reader, writer):
                         if not access:
                             answer = "No access to chat\n"
                         else:
-                            my_user.open_chat(name)
-                            # TODO: message to chat about your join
+                            if my_user.open_chat(name):
+                                for user_id in chat.people_in_chat_IRL:
+                                    if user_id is not my_user._user_id:
+                                        await chat.users[user_id]['queue'].put(
+                                            '{} join the chat'.format(my_user.username)
+                                        )
+
                             answer = '{0:_^30}\n'.format(name.upper())
 
                     case 'create_chat':
@@ -136,40 +174,75 @@ async def handler(reader, writer):
                                 autoright=chat_statistics["autoright"]
                             )
 
-                            # TODO: message to chat about your creation
-
                             answer = '{0: ^30}\n'.format(
                                 f'You successfully create new chat {chat_statistics["name"]}'
                             )
 
+                    case 'update_chat':
+                        chat_statistics = parse_create_chat(args)
+
+                        if not chat_statistics:
+                            answer = "Broken data\n"
+                        else:
+                            try:
+                                print(f"LOG: {chat_statistics}")
+                                response = my_user.update_chat(
+                                    name=chat_statistics["name"],
+                                    limit=chat_statistics["limit"],
+                                    security_mode=chat_statistics["security_mode"],
+                                    password=chat_statistics["password"],
+                                    autoright=chat_statistics["autoright"]
+                                )
+                            except TerminalError as e:
+                                response = [e.__str__()]
+
+                            answer = '\n'.join(response)
+
                     case 'add_to_chat':
                         username, name = args
-                        user: User = TM_users[TLB_names[username]]
+                        user_id = TLB_names[username]
                         
+                        try:
+                            response = my_user.add_to_chat(user_id=user_id, name=name)
+                            await TM_users[user_id].queue.put(
+                                '{} invited you to {}'.format(my_user.username, name)
+                            )
+                        except TerminalError as e:
+                            response = [e.__str__()]
 
-                        pass
+
+                        answer = '\n'.join(response)
+
                     case 'quit_chat':
                         my_user.quit_chat(args[0])
 
-                        # TODO: message to chat about your leave
+                        for user_id in chat.people_in_chat_IRL:
+                            await chat.users[user_id]['queue'].put(
+                                '{} leaves the chat'.format(my_user.username)
+                            )
 
                         answer = '{0: ^30}\n'.format(f'You leave chat {args[0]}')
 
                     case 'delete_chat':
                         chat: Chat = TM_chats[args[0]]
-                        access = chat.check_Rights(my_user, Rights.ADMINISTRATOR)
+                        try:
+                            chat.check_Rights(my_user, Rights.ADMINISTRATOR)
 
-                        if isinstance(access, Exception):
-                            answer = access.__str__()
-                        else:
+                            for user_id in chat.people_in_chat_IRL:
+                                if user_id is not my_user._user_id:
+                                    await chat.users[user_id]['queue'].put(
+                                        '{} deletes the chat'.format(my_user.username)
+                                    )
+
                             my_user.delete_chat(chat.name)
-
-                            # TODO: message to chat about action (for online people)
-
                             answer = '{0: ^30}\n'.format(f'You delete chat {args[0]}')
 
+                        except Exception as e:
+                            answer = e.__str__()
+
+
                     case 'info_chat':
-                        chat: Chat = TM_chats[name]
+                        chat: Chat = TM_chats[args[0]]
 
                         response = my_user.info_chat(chat.name)
 
@@ -181,6 +254,75 @@ async def handler(reader, writer):
                             answer.append(f'  - {item[0]}({item[1]})' + ('\tonline' if item[0] in response['Online'] else ''))
 
                         answer = '\n'.join(answer)
+
+                    case 'send':
+                        response = []
+                        try:
+                            match len(args):
+                                case 1:
+                                    response = my_user.send(msg=args[0])
+                                case 3:
+                                    assert args[1] == '-m'
+                                    response = my_user.send(msg=args[0], mode=args[2])
+                                case 4:
+                                    assert args[1] == '-m'
+                                    response = my_user.send(msg=args[0], mode=args[2], style=args[3])
+                                case _:
+                                    assert False
+                        except UnvalidChatError as e:
+                            answer = str(e)
+                        except Exception as q:
+                            answer = 'broken data\n'
+
+                        if isinstance(response, Message):
+                            answer = send_preparing(response)
+                            for user_id in my_user.current_chat.people_in_chat_IRL:
+                                if user_id is not my_user._user_id:
+                                    await chat.users[user_id]['queue'].put(answer)
+
+                    case 'reply':
+                        response = []
+                        try:
+                            assert args[0].isdigit()
+
+                            match len(args):
+                                case 2:
+                                    response = my_user.send(msg=args[1], reply_id=int(args[0]))
+                                case 4:
+                                    assert args[2] == '-m'
+                                    response = my_user.send(msg=args[1], mode=args[3], reply_id=int(args[0]))
+                                case 5:
+                                    assert args[2] == '-m'
+                                    response = my_user.send(msg=args[1], mode=args[3], style=args[4], reply_id=int(args[0]))
+                                case _:
+                                    assert False
+                        except UnvalidChatError as e:
+                            answer = str(e)
+                        except Exception as q:
+                            answer = 'broken data\n'
+
+                        print('LOG: in reply')
+                        print(response)
+
+                        if isinstance(response, Message):
+                            answer = send_preparing(response, my_user.current_chat)
+                            for user_id in my_user.current_chat.people_in_chat_IRL:
+                                if user_id is not my_user._user_id:
+                                    await chat.users[user_id]['queue'].put(answer)
+
+                    case 'add_to_favourites':
+                        try:
+                            answer = ''
+                            my_user.add_to_favourites(args[0])
+                        except TerminalError as e:
+                            answer = str(e)
+
+                    case 'exit':
+                        try:
+                            answer = ''
+                            my_user.exit_chat()
+                        except TerminalError as e:
+                            answer = str(e)
 
                     case _:
                         continue
