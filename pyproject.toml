@@ -1,0 +1,20 @@
+[project]
+name = "msg"
+description = "Teminal Messenger"
+version = "0.0.1"
+dependencies = ["python-cowsay", "art"]
+
+[build-system]
+requires = ["Sphinx", "build", "doit", "art", "python-cowsay", "setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+msg = "msg"
+
+[tool.setuptools.package-data]
+msg = ["msg/po/*", "msg/_build/*", "msg/server/*", "msg/client/*", "msg/common/*", "msg/MSG.pot", ]
+
+[project.scripts]
+client = "msg.client.__main__:client"
+server = "msg.server.__main__:start"
+
