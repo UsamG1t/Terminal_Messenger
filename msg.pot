@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-06-26 05:36+0300\n"
+"POT-Creation-Date: 2024-06-26 15:03+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,4 +16,72 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.15.0\n"
+
+#: msg/server/__init__.py:103
+msgid "Welcome to Terminal Messenger, {}\n"
+msgstr ""
+
+#: msg/server/__init__.py:109
+msgid "Avaliable chats:"
+msgstr ""
+
+#: msg/server/__init__.py:111
+msgid "Hidden chats:"
+msgstr ""
+
+#: msg/server/__init__.py:151
+msgid "No access to chat\n"
+msgstr ""
+
+#: msg/server/__init__.py:157
+msgid "{} join the chat"
+msgstr ""
+
+#: msg/server/__init__.py:170 msg/server/__init__.py:189
+msgid "Broken data\n"
+msgstr ""
+
+#: msg/server/__init__.py:181
+msgid "You successfully create new chat {}"
+msgstr ""
+
+#: msg/server/__init__.py:216
+msgid "{} invited you to {}"
+msgstr ""
+
+#: msg/server/__init__.py:230
+msgid "{} leaves the chat"
+msgstr ""
+
+#: msg/server/__init__.py:233
+msgid "You leave chat {}"
+msgstr ""
+
+#: msg/server/__init__.py:250
+msgid "{} deletes the chat"
+msgstr ""
+
+#: msg/server/__init__.py:254
+msgid "You delete chat {}"
+msgstr ""
+
+#: msg/server/__init__.py:270
+msgid "Name: {}"
+msgstr ""
+
+#: msg/server/__init__.py:271
+msgid "Creator: {}"
+msgstr ""
+
+#: msg/server/__init__.py:272
+msgid "Participants:"
+msgstr ""
+
+#: msg/server/__init__.py:298 msg/server/__init__.py:326
+msgid "broken data\n"
+msgstr ""
+
+#: msg/server/__init__.py:368
+msgid "Set up locale: {}"
+msgstr ""
 
