@@ -219,6 +219,8 @@ class User:
      - rights: Rights
     """
 
+    locale = "en_US.UTF8"
+
     def __init__(self, user_id, username):
         """Creation of user."""
         self._user_id = user_id
@@ -403,6 +405,14 @@ class User:
 
         self.current_chat.people_in_chat_IRL.discard(self._user_id)
         self.current_chat = None
+
+    def set_locale(self, locale):
+        """Set user's locale."""
+        self.locale = locale
+
+    def get_locale(self):
+        """Get user's locale."""
+        return self.locale
 
 
 # set of all users in TM
