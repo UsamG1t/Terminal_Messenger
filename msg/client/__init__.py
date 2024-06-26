@@ -112,6 +112,25 @@ class clientCmd(cmd.Cmd):
         msg = f"add_to_favourites {cmd[0]}\n"
         self.s.sendall(msg.encode())
 
+    def do_delete_from_favourites(self, args):
+        cmd = shlex.split(args)
+        if len(cmd) != 1:
+            print("Invalid arguments")
+            return
+        if not cmd[0].isdigit():
+            print("Invalid message id")
+            return
+        msg = f"delete_from_favourites {cmd[0]}\n"
+        self.s.sendall(msg.encode())
+
+    def do_show_favourites(self, args):
+        cmd = shlex.split(args)
+        if len(cmd) != 0:
+            print("Invalid arguments")
+            return
+        msg = "show_favourites\n"
+        self.s.sendall(msg.encode())
+
     def do_reply(self, args):
         """Reply to the message."""
         msg = f"reply {args}\n"
@@ -137,7 +156,7 @@ class clientCmd(cmd.Cmd):
 def msg_receiver(client):
     """Receiving messages."""
     while res := client.s.recv(1024).rstrip().decode():
-        print(f"\n{res}\n{client.prompt}{readline.get_line_buffer()}", end="", flush=True)
+        print(f"{res}\n{client.prompt}{readline.get_line_buffer()}", end="", flush=True)
 
 
 def start_client(username, host="localhost", port=1337):
