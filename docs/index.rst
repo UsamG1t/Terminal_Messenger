@@ -1,0 +1,24 @@
+.. Terminal_Messenger documentation master file, created by
+   sphinx-quickstart on Wed Jun 26 03:02:39 2024.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to Terminal_Messenger's documentation!
+==============================================
+
+Terminal_Messenger supports multiple restricted chats with history and favorite messages saved
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   API
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

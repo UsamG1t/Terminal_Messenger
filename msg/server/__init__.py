@@ -2,10 +2,9 @@
 import shlex
 import asyncio
 
-from common import *
+from ..common import *
 from art import text2art
 from cowsay import cowsay
-
 
 
 def parse_create_chat(args: list):
@@ -47,8 +46,9 @@ def parse_create_chat(args: list):
     print("LOG:", result)
     return result
 
+
 def send_preparing(response: Message, chat: Chat = None) -> str:
-    """handler for sending command."""
+    """Handle for sending command."""
     answer = []
 
     print(f'LOG:')
@@ -354,5 +354,5 @@ async def main(port=1337):
 
 
 def start(port=1337):
-    """Start the server"""
+    """Start the server."""
     asyncio.run(main(port))
