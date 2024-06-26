@@ -113,6 +113,7 @@ class clientCmd(cmd.Cmd):
         self.s.sendall(msg.encode())
 
     def do_delete_from_favourites(self, args):
+        """Delete message from favorites."""
         cmd = shlex.split(args)
         if len(cmd) != 1:
             print("Invalid arguments")
@@ -124,6 +125,7 @@ class clientCmd(cmd.Cmd):
         self.s.sendall(msg.encode())
 
     def do_show_favourites(self, args):
+        """Show favorites messages."""
         cmd = shlex.split(args)
         if len(cmd) != 0:
             print("Invalid arguments")
