@@ -6,27 +6,29 @@ from io import StringIO
 
 class TestClient(unittest.TestCase):
     def test_0(self):
+        command = "create_chat new_chat"
         with (
-                mock.patch('sys.stdin', StringIO("create_chat new_chat")),
+                mock.patch('sys.stdin', StringIO(command)),
                 mock.patch('socket.socket', autospec=True) as socket_mock,
                 mock.patch('msg.client.msg_receiver', return_value=True)
              ):
             client.start_client("test", False)
-            sendall_call = socket_mock.mock_calls[3].args[0]
+            sendall_call = socket_mock.mock_calls[4].args[0]
             self.assertEqual(sendall_call, b'create_chat new_chat\n')
 
     def test_1(self):
+        command = "open_chat new_chat"
         with (
-                mock.patch('sys.stdin', StringIO("open_chat new_chat")),
+                mock.patch('sys.stdin', StringIO(command)),
                 mock.patch('socket.socket', autospec=True) as socket_mock,
                 mock.patch('msg.client.msg_receiver', return_value=True)
              ):
             client.start_client("test", False)
-            sendall_call = socket_mock.mock_calls[3].args[0]
+            sendall_call = socket_mock.mock_calls[4].args[0]
             self.assertEqual(sendall_call, b'open_chat new_chat\n')
 
     def test_2(self):
-        command = "create_chat new_chat\nshow_chatlist"
+        command = "show_chatlist"
         with (
                 mock.patch('sys.stdin', StringIO(command)),
                 mock.patch('socket.socket', autospec=True) as socket_mock,
