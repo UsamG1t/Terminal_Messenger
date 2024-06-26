@@ -1,4 +1,4 @@
-
+import os
 from glob import glob
 from doit.tools import create_folder
 
@@ -7,10 +7,10 @@ HTMLINDEX = "_build/html/index.html"
 def task_html():
     """Generate HTML docs."""
     return {
-        # 'actions': ['sphinx-build -M html "Documentation/docs" "msg/_build"'],
-        # 'file_dep': ["Documentation/docs/index.rst", "Documentation/docs/server_documentation.rst", "msg/server/__init__.py"],
+        'actions': ['sphinx-build -M html ./docs msg/docs/_build'],
+        'file_dep': glob('docs/*.rst') + glob('msg/*/*.py'),
         'task_dep': ['i18n'],
-        'targets': [HTMLINDEX]
+        'targets': ['docs/_build']
     }
 
 def task_erase():
@@ -23,34 +23,40 @@ def task_erase():
 def task_pot():
     """Re-create .pot ."""
     return {
-            'actions': ['pybabel extract --keywords=ngettext:2,3 --keywords=gettext:2 msg -o msg/MSG.pot'],
+            'actions': ['pybabel extract --keywords=ngettext:2,3 --keywords=_:2 msg -o msg.pot'],
             'file_dep': glob('msg/server/*.py'),
-            'targets': ['msg/MSG.pot'],
+            'targets': ['msg.pot'],
            }
 
 def task_po():
     """Update translations."""
     return {
-            'actions': ['pybabel update --ignore-pot-creation-date -D MSG_Locale -d msg/po -l ru_RU.UTF-8 -i msg/MSG.pot'],
-            'file_dep': ['msg/MSG.pot'],
-            'targets': ['msg/po/ru_RU.UTF-8/LC_MESSAGES/MSG_Locale.po'],
+            'actions': ['pybabel update --ignore-pot-creation-date -D msg -d po -l ru_RU.UTF-8 -i msg.pot'],
+            'file_dep': ['msg.pot'],
+            'targets': ['po/ru_RU.UTF-8/LC_MESSAGES/msg.po'],
            }
+
+def task_mo():
+    return {
+            'actions': [
+                (os.makedirs, ["msg/ru_RU.UTF-8/LC_MESSAGES"],{"exist_ok": True}),
+                'pybabel compile -D msg -l ru_RU.UTF-8 -d msg -i po/ru_RU.UTF-8/LC_MESSAGES/msg.po'
+                ],
+            'file_dep': ['po/ru_RU.UTF-8/LC_MESSAGES/msg.po'],
+            'targets': ['msg/msg.mo'],
+            }
 
 def task_i18n():
     """Compile translations."""
     return {
-            'actions': [
-                (create_folder, [f'msg/po/ru_RU.UTF-8/LC_MESSAGES']),
-                f'pybabel compile -D MSG_Locale -l ru_RU.UTF-8 -i msg/po/ru_RU.UTF-8/LC_MESSAGES/MSG_Locale.po -d msg/po'
-                       ],
-            'file_dep': ['msg/po/ru_RU.UTF-8/LC_MESSAGES/MSG_Locale.po'],
-            'targets': ['msg/po/ru_RU.UTF-8/LC_MESSAGES/MSG_Locale.mo'],
+            'actions': None,
+            'task_dep': ['pot', 'po', 'mo'],
            }
 
 def task_test():
     """Update translations."""
     return {
-            # 'actions': ['python3.10 -m unittest test_client_server.py test_client.py'],
+            'actions': ['python3.10 -m unittest'],
             'task_dep': ['i18n'],
            }
 
