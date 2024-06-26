@@ -218,7 +218,7 @@ async def handler(reader, writer):
                         except TerminalError as e:
                             response = [e.__str__()]
 
-                        answer = '\n'.join(response)
+                        answer = ''.join(response)
 
                     case 'quit_chat':
                         try:
