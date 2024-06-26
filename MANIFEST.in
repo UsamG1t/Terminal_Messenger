@@ -1,7 +1,8 @@
 graft msg
-graft Documentation
+graft docs
+graft po
 include pyproject.toml
 include Pipfile
 include dodo.py
-include test_client_server.py
+include test_client.py
 
