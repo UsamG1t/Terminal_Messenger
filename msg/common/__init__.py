@@ -28,6 +28,24 @@ class NoAccessError(TerminalError):
         You don't have the necessary access rights to perform this action"""
 
 
+class NoChatError(TerminalError):
+    """Existence of Chat exception."""
+
+    def __str__(self):
+        """Str."""
+        return """Error during try to do smth with unexisting chat:
+        Chat you are trying work with is Unavaliable"""
+
+
+class NoUserError(TerminalError):
+    """Existence of User exception."""
+
+    def __str__(self):
+        """Str."""
+        return """Error during try to do smth with unexisting user:
+        user you are trying work with is Unavaliable"""
+
+
 class UnvalidChatError(TerminalError):
     """Access exception."""
 
@@ -145,9 +163,10 @@ class Chat:
 
     def check_Rights(self, user, right: Rights):
         """Rights check."""
-        chat_user = self.users.setdefault(user._user_id)
+        chat_user = self.users.setdefault(user._user_id, None)
 
         if chat_user is None:
+            del self.users[user._user_id]
             raise UnvalidChatError
 
         if right > chat_user['rights']:
@@ -297,16 +316,20 @@ class User:
 
     def update_chat(self, name, limit: int = -1, autoright: Rights = None, security_mode=None, password=None):
         """Update chat."""
-        chat: Chat = TM_chats[name]
-        response = []
         try:
+            chat: Chat = TM_chats.setdefault(name, None)
+            if chat is None:
+                del TM_chats[name]
+                raise NoChatError()
+
+            response = []
             chat.check_Rights(user=self, right=Rights.ADMINISTRATOR)
 
-            if limit != -1:
+            if limit != -1 and chat.limit != limit:
                 chat.set_limit(limit=limit)
                 response.append(f'update limit: chat is {(str(limit)+"limited")*(limit is not None) + "Unlimited"*(limit is None)} now')
 
-            if autoright:
+            if autoright and chat.autoright != autoright:
                 chat.set_autoright(autoright=autoright)
                 response.append(f'update autoright: everyone is {str(autoright)} now')
 
@@ -324,10 +347,17 @@ class User:
 
         Available only if you are a chat administrator
         """
-        chat: Chat = TM_chats[name]
-        user: User = TM_users[user_id]
-
         try:
+            chat: Chat = TM_chats.setdefault(name, None)
+            if chat is None:
+                del TM_chats[name]
+                raise NoChatError()
+
+            user: User = TM_users.setdefault(user_id, None)
+            if user is None:
+                del TM_users[user_id]
+                raise NoUserError()
+
             chat.check_Rights(user=self, right=Rights.ADMINISTRATOR)
 
             chat.users[user._user_id] = {
@@ -346,7 +376,10 @@ class User:
 
     def quit_chat(self, name):
         """Quit chat."""
-        chat: Chat = TM_chats[name]
+        chat: Chat = TM_chats.setdefault(name, None)
+        if chat is None:
+            del TM_chats[name]
+            raise NoChatError()
 
         chat.people_in_chat_IRL.discard(self._user_id)
         chat.users.pop(self._user_id)
@@ -373,7 +406,11 @@ class User:
             'Name': chat.name,
             'Creator': TM_users[chat._creator].username,
             'Participants': [(user['username'], user['rights']) for user in chat.users.values()],
-            'Online': [user['username'] for user in chat.users.values() if TLB_names[user['username']] in chat.people_in_chat_IRL]
+            'Online': [
+                user['username']
+                for user in chat.users.values()
+                if TLB_names[user['username']] in chat.people_in_chat_IRL
+            ]
         }
 
         return response
@@ -383,7 +420,14 @@ class User:
         if self.current_chat is None:
             raise UnvalidChatError()
 
-        message = Message(text=msg, mode=mode, style=style, sender=self, msg_ID=len(self.current_chat.stream), reply_ID=reply_id)
+        message = Message(
+            text=msg,
+            mode=mode,
+            style=style,
+            sender=self,
+            msg_ID=len(self.current_chat.stream),
+            reply_ID=reply_id
+        )
         self.current_chat.stream.append(message)
 
         return message

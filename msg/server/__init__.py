@@ -2,6 +2,7 @@
 import shlex
 import asyncio
 import gettext
+
 from ..common import *
 from art import text2art
 from cowsay import cowsay
@@ -43,7 +44,7 @@ def parse_create_chat(args: list):
                 case '-l' | '--limit':
                     assert args[i + 1].isdigit()
                     print('1 done')
-                    result['limit'] = args[i + 1]
+                    result['limit'] = int(args[i + 1])
                 case '-s' | '--security_mode':
                     print('2 done')
                     result['security_mode'] = True
@@ -68,7 +69,7 @@ def send_preparing(response: Message, chat: Chat = None) -> str:
     """Handle for sending command."""
     answer = []
 
-    print(f'LOG:')
+    print('LOG:')
     print(response)
 
     answer.append(f'<{response._msg_ID}>')
@@ -88,6 +89,7 @@ def send_preparing(response: Message, chat: Chat = None) -> str:
 
     return '\n'.join(answer)
 
+
 async def handler(reader, writer):
     """Async logic of handler."""
     client = writer.get_extra_info("peername")
@@ -95,7 +97,6 @@ async def handler(reader, writer):
     my_user = User(user_id=hash(client), username=hash(client))
     TM_users[my_user._user_id] = my_user
     TLB_names[my_user._user_id] = my_user._user_id
-
 
     send = asyncio.create_task(reader.readline())
     receive = asyncio.create_task(my_user.queue.get())
@@ -114,7 +115,7 @@ async def handler(reader, writer):
 
                 args = shlex.split(request.result().decode())
                 cmd, args = (args[0], args[1:]) if len(args) > 0 else ("", args)
-                
+
                 print("LOG: ", client, request.result().decode())
                 print("LOG: ", args)
                 answer = ""
@@ -158,27 +159,35 @@ async def handler(reader, writer):
                         answer = '\n'.join(Avaliable + Hidden) + '\n'
 
                     case 'open_chat':
-                        name, *password = args
-                        chat: Chat = TM_chats[name]
-                        access = True
-                        locale = my_user.get_locale()
+                        try:
+                            name, *password = args
+                            chat: Chat = TM_chats.setdefault(name, None)
+                            if chat is None:
+                                del TM_chats[name]
+                                raise NoChatError()
 
-                        if chat.security_mode:
-                            access = chat.check_password(
-                                password_to_check=password[0] if password else None
-                            )
+                            access = True
+                            locale = my_user.get_locale()
 
-                        if not access:
-                            answer = _(locale, "No access to chat\n")
-                        else:
-                            if my_user.open_chat(name):
-                                for user_id in chat.people_in_chat_IRL:
-                                    if user_id is not my_user._user_id:
-                                        await chat.users[user_id]['queue'].put(
-                                            _(locale, '{} join the chat').format(my_user.username)
-                                        )
+                            if chat.security_mode:
+                                access = chat.check_password(
+                                    password_to_check=password[0] if password else None
+                                )
 
-                            answer = '{0:_^30}\n'.format(name.upper())
+                            if not access:
+                                answer = _(locale, "No access to chat\n")
+                            else:
+                                if my_user.open_chat(name):
+                                    for user_id in chat.people_in_chat_IRL:
+                                        if user_id is not my_user._user_id:
+                                            await chat.users[user_id]['queue'].put(
+                                                _(locale, '{} join the chat').format(my_user.username)
+                                            )
+
+                                answer = '{0:_^30}\n'.format(name.upper())
+
+                        except Exception as e:
+                            answer = e.__str__()
 
                     case 'create_chat':
                         chat_statistics = parse_create_chat(args)
@@ -221,11 +230,14 @@ async def handler(reader, writer):
                             answer = '\n'.join(response)
 
                     case 'add_to_chat':
-                        username, name = args
-                        user_id = TLB_names[username]
-                        locale = my_user.get_locale()
-                        
                         try:
+                            username, name = args
+                            user_id = TLB_names.setdefault(username, None)
+                            if user_id is None:
+                                del TLB_names[username]
+                                raise NoUserError()
+                            locale = my_user.get_locale()
+
                             response = my_user.add_to_chat(user_id=user_id, name=name)
                             await TM_users[user_id].queue.put(
                                 _(locale, '{} invited you to {}').format(my_user.username, name)
@@ -233,24 +245,30 @@ async def handler(reader, writer):
                         except TerminalError as e:
                             response = [e.__str__()]
 
-
                         answer = '\n'.join(response)
 
                     case 'quit_chat':
-                        my_user.quit_chat(args[0])
-                        locale = my_user.get_locale()
+                        try:
+                            my_user.quit_chat(args[0])
+                            locale = my_user.get_locale()
 
-                        for user_id in chat.people_in_chat_IRL:
-                            await chat.users[user_id]['queue'].put(
-                                _(locale, '{} leaves the chat').format(my_user.username)
-                            )
+                            for user_id in chat.people_in_chat_IRL:
+                                await chat.users[user_id]['queue'].put(
+                                    _(locale, '{} leaves the chat').format(my_user.username)
+                                )
 
-                        answer = '{0: ^30}\n'.format(_(locale, 'You leave chat {}').format(args[0]))
+                            answer = '{0: ^30}\n'.format(_(locale, 'You leave chat {}').format(args[0]))
+                        except Exception as e:
+                            answer = e.__str__()
 
                     case 'delete_chat':
-                        chat: Chat = TM_chats[args[0]]
-                        locale = my_user.get_locale()
                         try:
+                            chat: Chat = TM_chats.setdefault(args[0], None)
+                            if chat is None:
+                                del TM_chats[args[0]]
+                                raise NoChatError()
+                            locale = my_user.get_locale()
+
                             chat.check_Rights(my_user, Rights.ADMINISTRATOR)
 
                             for user_id in chat.people_in_chat_IRL:
@@ -265,21 +283,26 @@ async def handler(reader, writer):
                         except Exception as e:
                             answer = e.__str__()
 
-
                     case 'info_chat':
-                        chat: Chat = TM_chats[args[0]]
-                        locale = my_user.get_locale()
+                        try:
+                            chat: Chat = TM_chats.setdefault(args[0], None)
+                            if chat is None:
+                                del TM_chats[args[0]]
+                                raise NoChatError()
+                            locale = my_user.get_locale()
 
-                        response = my_user.info_chat(chat.name)
+                            response = my_user.info_chat(chat.name)
 
-                        answer = []
-                        answer.append(_(locale, 'Name: {}').format(response["Name"]))
-                        answer.append(_(locale, 'Creator: {}').format(response["Creator"]))
-                        answer.append(_(locale, 'Participants:'))
-                        for item in response['Participants']:
-                            answer.append(f'  - {item[0]}({item[1]})' + ('\tonline' if item[0] in response['Online'] else ''))
+                            answer = []
+                            answer.append(_(locale, 'Name: {}').format(response["Name"]))
+                            answer.append(_(locale, 'Creator: {}').format(response["Creator"]))
+                            answer.append(_(locale, 'Participants:'))
+                            for item in response['Participants']:
+                                answer.append(f'  - {item[0]}({item[1]})' + ('\tonline' if item[0] in response['Online'] else ''))
 
-                        answer = '\n'.join(answer)
+                            answer = '\n'.join(answer)
+                        except Exception as e:
+                            answer = e.__str__()
 
                     case 'send':
                         response = []
@@ -297,7 +320,7 @@ async def handler(reader, writer):
                                     assert False
                         except UnvalidChatError as e:
                             answer = str(e)
-                        except Exception as q:
+                        except Exception:
                             locale = my_user.get_locale()
                             answer = _(locale, 'broken data\n')
 
@@ -325,7 +348,7 @@ async def handler(reader, writer):
                                     assert False
                         except UnvalidChatError as e:
                             answer = str(e)
-                        except Exception as q:
+                        except Exception:
                             locale = my_user.get_locale()
                             answer = _(locale, 'broken data\n')
 

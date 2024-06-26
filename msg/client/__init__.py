@@ -147,4 +147,5 @@ def start_client(username, host="localhost", port=1337):
         client = clientCmd(s)
         handler = threading.Thread(target=msg_receiver, args=(client,))
         handler.start()
+        s.sendall(f"entrance {username}\n".encode())
         client.cmdloop()
