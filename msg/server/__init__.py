@@ -4,8 +4,6 @@ import asyncio
 import gettext
 
 from ..common import *
-from art import text2art
-from cowsay import cowsay
 from pathlib import Path
 
 
@@ -63,31 +61,6 @@ def parse_create_chat(args: list):
 
     print("LOG:", result)
     return result
-
-
-def send_preparing(response: Message, chat: Chat = None) -> str:
-    """Handle for sending command."""
-    answer = []
-
-    print('LOG:')
-    print(response)
-
-    answer.append(f'<{response._msg_ID}>')
-    answer.append(f'({response._sender.username})')
-    if response.reply_ID is not None:
-        answer.append(f'Reply on <{response.reply_ID}>: \"{chat.stream[response.reply_ID].text}\"')
-    answer.append('\n')
-
-    match response.mode:
-        case None:
-            text = response.text
-        case 'art':
-            text = text2art(response.text, font=(response.style if response.style is not None else 'rand'))
-        case 'cowsay':
-            text = cowsay(response.text, cow=(response.style if response.style is not None else 'default'))
-    answer.append(text + '\n')
-
-    return '\n'.join(answer)
 
 
 async def handler(reader, writer):
@@ -363,8 +336,23 @@ async def handler(reader, writer):
 
                     case 'add_to_favourites':
                         try:
+                            assert args[0].isdigit()
                             answer = ''
-                            my_user.add_to_favourites(args[0])
+                            my_user.add_to_favourites(int(args[0]))
+                        except TerminalError as e:
+                            answer = str(e)
+
+                    case 'delete_from_favourites':
+                        try:
+                            assert args[0].isdigit()
+                            answer = ''
+                            my_user.delete_from_favourites(int(args[0]))
+                        except TerminalError as e:
+                            answer = str(e)
+
+                    case 'show_favourites':
+                        try:
+                            answer = my_user.show_favourites()
                         except TerminalError as e:
                             answer = str(e)
 

@@ -2,6 +2,8 @@
 import asyncio
 
 from enum import IntEnum
+from art import text2art
+from cowsay import cowsay
 
 
 class TerminalError(Exception):
@@ -204,9 +206,9 @@ class Message:
         self.reply_ID = reply_ID
         self.favourite = False
 
-    def set_favourite(self):
+    def set_favourite(self, setup=True):
         r"""Set up of \'favourites\' label."""
-        self.favourite = True
+        self.favourite = setup
 
     def __str__(self):
         """Str."""
@@ -442,6 +444,29 @@ class User:
 
         self.current_chat.favourites.append(msg)
 
+    def delete_from_favourites(self, msg_id: int):
+        """Delete message from Favourites."""
+        if self.current_chat is None:
+            raise UnvalidChatError()
+
+        msg: Message = self.current_chat.stream[msg_id]
+        msg.set_favourite(False)
+
+        self.current_chat.favourites.remove(msg)
+
+    def show_favourites(self):
+        """Show favourite messages."""
+        if self.current_chat is None:
+            raise UnvalidChatError()
+
+        response = []
+        response.append(f'{"favourites":~^30}')
+        for msg in self.current_chat.favourites:
+            response.append(send_preparing(msg, self.current_chat))
+        response.append(f'{"":~^30}')
+
+        return '\n'.join(response)
+
     def exit_chat(self):
         """Exit current chat."""
         if self.current_chat is None:
@@ -462,3 +487,28 @@ class User:
 # set of all users in TM
 TM_users: dict[str, User] = {}
 TLB_names: dict[str, str] = {}
+
+
+def send_preparing(message: Message, chat: Chat = None) -> str:
+    """Handle for sending command."""
+    answer = []
+
+    print('LOG:')
+    print(message)
+
+    answer.append(f'<{message._msg_ID}>')
+    answer.append(f'({message._sender.username})')
+    if message.reply_ID is not None:
+        answer.append(f'Reply on <{message.reply_ID}>: \"{chat.stream[message.reply_ID].text}\"')
+    answer.append('\n')
+
+    match message.mode:
+        case None:
+            text = message.text
+        case 'art':
+            text = text2art(message.text, font=(message.style if message.style is not None else 'rand'))
+        case 'cowsay':
+            text = cowsay(message.text, cow=(message.style if message.style is not None else 'default'))
+    answer.append(text + '\n')
+
+    return '\n'.join(answer)
