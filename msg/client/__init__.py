@@ -4,6 +4,8 @@ import readline
 import socket
 import threading
 import shlex
+import webbrowser
+import os
 from ..common import *
 
 
