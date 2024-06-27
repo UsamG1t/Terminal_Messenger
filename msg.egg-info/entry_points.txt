@@ -1,3 +1,0 @@
-[console_scripts]
-client = msg.client.__main__:client
-server = msg.server.__main__:start

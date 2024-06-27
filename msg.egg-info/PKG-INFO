@@ -1,6 +1,0 @@
-Metadata-Version: 2.1
-Name: msg
-Version: 0.0.1
-Summary: Teminal Messenger
-Requires-Dist: python-cowsay
-Requires-Dist: art
