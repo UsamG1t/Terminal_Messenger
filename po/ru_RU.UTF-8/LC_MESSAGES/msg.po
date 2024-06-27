@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-06-26 05:36+0300\n"
+"POT-Creation-Date: 2024-06-27 03:34+0300\n"
 "PO-Revision-Date: 2024-06-26 05:39+0300\n"
 "Last-Translator: Maria Megina <meginam16@gmail.com>\n"
 "Language: ru_RU\n"
@@ -24,6 +24,7 @@ msgid "Welcome to Terminal Messenger, {}\n"
 msgstr "Добро пожаловать в Терминальный Мессенджерб {}\n"
 
 #: msg/server/__init__.py:109
+#, fuzzy
 msgid "Avaliable chats:"
 msgstr "Доступные чаты:"
 
@@ -51,39 +52,39 @@ msgstr "Вы удачно создали новый чат {}"
 msgid "{} invited you to {}"
 msgstr "{} пригласил вас в {}"
 
-#: msg/server/__init__.py:230
+#: msg/server/__init__.py:228
 msgid "{} leaves the chat"
 msgstr "{} покинул чат"
 
-#: msg/server/__init__.py:233
+#: msg/server/__init__.py:231
 msgid "You leave chat {}"
 msgstr "Вы покинули чат {}"
 
-#: msg/server/__init__.py:250
+#: msg/server/__init__.py:248
 msgid "{} deletes the chat"
 msgstr "{} удалил чат"
 
-#: msg/server/__init__.py:254
+#: msg/server/__init__.py:252
 msgid "You delete chat {}"
 msgstr "Вы удалили чат {}"
 
-#: msg/server/__init__.py:270
+#: msg/server/__init__.py:268
 msgid "Name: {}"
 msgstr "Название: {}"
 
-#: msg/server/__init__.py:271
+#: msg/server/__init__.py:269
 msgid "Creator: {}"
 msgstr "Создатель: {}"
 
-#: msg/server/__init__.py:272
+#: msg/server/__init__.py:270
 msgid "Participants:"
 msgstr "Участники:"
 
-#: msg/server/__init__.py:298 msg/server/__init__.py:326
+#: msg/server/__init__.py:296 msg/server/__init__.py:324
 msgid "broken data\n"
 msgstr "Поврежденные данные\n"
 
-#: msg/server/__init__.py:368
+#: msg/server/__init__.py:366
 msgid "Set up locale: {}"
 msgstr "Установлена локаль: {}"
 

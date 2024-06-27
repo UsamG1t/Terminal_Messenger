@@ -211,14 +211,12 @@ async def handler(reader, writer):
                                 raise NoUserError()
                             locale = my_user.get_locale()
 
-                            response = my_user.add_to_chat(user_id=user_id, name=name)
+                            answer = my_user.add_to_chat(user_id=user_id, name=name)
                             await TM_users[user_id].queue.put(
                                 _(locale, '{} invited you to {}').format(my_user.username, name)
                             )
                         except TerminalError as e:
-                            response = [e.__str__()]
-
-                        answer = '\n'.join(response)
+                            answer = e.__str__()
 
                     case 'quit_chat':
                         try:
