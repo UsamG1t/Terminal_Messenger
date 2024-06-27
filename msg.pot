@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-06-26 15:03+0300\n"
+"POT-Creation-Date: 2024-06-27 04:09+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -49,39 +49,39 @@ msgstr ""
 msgid "{} invited you to {}"
 msgstr ""
 
-#: msg/server/__init__.py:230
+#: msg/server/__init__.py:228
 msgid "{} leaves the chat"
 msgstr ""
 
-#: msg/server/__init__.py:233
+#: msg/server/__init__.py:231
 msgid "You leave chat {}"
 msgstr ""
 
-#: msg/server/__init__.py:250
+#: msg/server/__init__.py:248
 msgid "{} deletes the chat"
 msgstr ""
 
-#: msg/server/__init__.py:254
+#: msg/server/__init__.py:252
 msgid "You delete chat {}"
 msgstr ""
 
-#: msg/server/__init__.py:270
+#: msg/server/__init__.py:268
 msgid "Name: {}"
 msgstr ""
 
-#: msg/server/__init__.py:271
+#: msg/server/__init__.py:269
 msgid "Creator: {}"
 msgstr ""
 
-#: msg/server/__init__.py:272
+#: msg/server/__init__.py:270
 msgid "Participants:"
 msgstr ""
 
-#: msg/server/__init__.py:298 msg/server/__init__.py:326
+#: msg/server/__init__.py:296 msg/server/__init__.py:324
 msgid "broken data\n"
 msgstr ""
 
-#: msg/server/__init__.py:368
+#: msg/server/__init__.py:366
 msgid "Set up locale: {}"
 msgstr ""
 
